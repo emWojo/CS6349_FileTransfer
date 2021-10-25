@@ -1,22 +1,27 @@
 import socket
+import threading
+import base64
 
-HOST = 'localhost'
-PORT = 22
-DEBUG_MODE = True
+HOST = '0.0.0.0'
+PORT = 6265
 
 print("Server Running")
-tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcpSocket.setblocking(False)
 
-try:
-    tcpSocket.bind(('localhost', PORT))
-except socket.error as e:
-    print(str(e))
-    print('Try again in a few minutes, exiting..')
-    exit()
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+s.listen(5)
+while True:
+    conn, addr = s.accept()
+    msg = b''
+    while True:
+        data = conn.recv(4096)
+        if not data: break
+        msg += data
+        print (msg)
+        conn.send(b"This is Server")
+    conn.close()
+    print ('client disconnected')
 
-if DEBUG_MODE:
-    print(tcpSocket)
 
 
 

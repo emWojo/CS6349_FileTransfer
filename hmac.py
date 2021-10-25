@@ -4,6 +4,7 @@ import base64
 # SHA256(k' xor opad || SHA256(k' xor ipad || m))
 # msgs of size 512 bits
 # REF: https://blog.titanwolf.in/a?ID=01650-20b33297-cbf3-4c8e-a0dc-360bc32acc01
+# Assume key and msg are byte strings
 def hmac_256(key, msg):
     #ipad = 00110110 repeating till packet length
     ipad = b'\x36' * 64
