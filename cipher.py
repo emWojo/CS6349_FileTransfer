@@ -1,6 +1,10 @@
 import secrets
 import hashlib
 
+# TODO: Improvements
+# One time pad?? generate key based on current one somehow have it be same for client and server
+# Generate same random number for client and server xor it repeating for length of msg along with key
+
 # assue msg is 512 bits or less
 def encode(key, msg):
     if len(key) > 56:
