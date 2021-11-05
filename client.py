@@ -18,20 +18,19 @@ ca = b'\x0c' * 64 #Client Auth
 si = b'\x0d' * 64 #Server Integrity
 sa = b'\x0e' * 64 #Server Auth
 k = [ci,ca,si,sa]
-k = ci
+#k = ci
 
 #TODO: FILE UPLOAD/DOWNLOAD HANDLING
-# Vars
+# Constants
 usage = "Usage:\n\thelp\n\tupload \"[file]\"\n\tdownload \"[file]\"\n\texit"
 fstore = "clientStore\\"
 # Place Holders
-f = None
+f = None #File Upload/Download Buffer
 
 print("Program Started")
 print(usage)
 while True:
-    inp = input("\n>> ")
-    inp = inp.split()
+    inp = input("\n>> ").split()
     if inp[0] == "help":
         print(usage)
     elif inp[0] == "upload":
@@ -51,8 +50,8 @@ while True:
         roundsByte = rounds.to_bytes(4, 'big')
         msg = b"".join([indByte, flag, roundsByte, name])
 
-        encMsg = util.encode(k, msg)
-        hashMsg = util.hmac_256(k, encMsg)
+        encMsg = util.encode(k[1], msg)
+        hashMsg = util.hmac_256(k[0], encMsg)
         sendMsg = b"".join([hashMsg, encMsg])
         s.send(sendMsg)
 
@@ -61,11 +60,11 @@ while True:
 
             checkMsg = data[:32]
             encMsg = data[32:]
-            hashMsg = util.hmac_256(k, encMsg)
+            hashMsg = util.hmac_256(k[2], encMsg)
 
             if(checkMsg == hashMsg):
                 print("good integ")
-                msg = util.decode(k,encMsg)
+                msg = util.decode(k[3],encMsg)
                 ind = int.from_bytes(msg[:4], 'big')
                 ind += 1
                 indByte = ind.to_bytes(4, 'big')
@@ -76,8 +75,8 @@ while True:
             contents = contents[28:]
             length = len(contents)
 
-            encMsg = util.encode(k, msg)
-            hashMsg = util.hmac_256(k, encMsg)
+            encMsg = util.encode(k[1], msg)
+            hashMsg = util.hmac_256(k[0], encMsg)
             sendMsg = b"".join([hashMsg, encMsg])
             s.send(sendMsg)
     elif inp[0] == "download":
