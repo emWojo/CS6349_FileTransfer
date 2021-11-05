@@ -10,10 +10,12 @@ def encode(key, msg):
     if len(key) > 56:
         print("Error: Key must be <= 56 bytes (448 bits) long")
     padKey = key + b'\x00' * (56 - len(key))
+    padMsg = msg + b'\x00' * (56 - len(msg))
+
     salt = secrets.token_bytes(8)
     keyHash = hashlib.sha256(salt)
     keyHash.update(padKey)
-    encMsg = xor_byte(keyHash.digest(), msg)
+    encMsg = xor_byte(keyHash.digest(), padMsg)
     return salt, encMsg
 
 def decode(salt, key, ecMsg):

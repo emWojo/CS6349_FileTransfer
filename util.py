@@ -1,9 +1,5 @@
 import hashlib
 
-# SHA256(k' xor opad || SHA256(k' xor ipad || m))
-# msgs of size 512 bits or less
-# REF: https://blog.titanwolf.in/a?ID=01650-20b33297-cbf3-4c8e-a0dc-360bc32acc01
-# Assume key and msg are byte strings
 def hmac_256(key, msg):
     #ipad = 00110110 repeating till packet length
     ipad = b'\x36' * 64
@@ -27,11 +23,23 @@ def hmac_256(key, msg):
     outHash.update(inHash.digest())
     return outHash.digest()
 
+def encode(key, msg):
+    if len(key) > 64:
+        print("Error: Key must be <= 64 bytes (512 bits) long")
+    if len(msg) > 32:
+        print("Error: Msg must be <= 32 bytes (256 bits) long")
+    padKey = key + b'\x00' * (64 - len(key))
+    padMsg = msg + b'\x00' * (64 - len(msg))
+
+    keyHash = hashlib.sha256(padKey)
+    encMsg = xor_byte(keyHash.digest(), padMsg)
+    return encMsg
+
+def decode(key, ecMsg):
+    padKey = key + b'\x00' * (64 - len(key))
+    keyHash = hashlib.sha256(padKey)
+    msg = xor_byte(keyHash.digest(), ecMsg)
+    return msg
+
 def xor_byte(strA, strB):
     return bytes([a ^ b for a, b in zip(strA, strB)])
-
-
-k = b'\x0b' * 20
-data = b"Hi There"
-result = hmac_256(k, data)
-print(result.hex())
