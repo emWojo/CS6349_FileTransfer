@@ -59,7 +59,7 @@ while True:
             print(flag)
             if flag == b'up':
                 state = 1
-                f = open("sample.txt", "ab")
+                f = open("sample.txt", "wb")
             elif flag == b'dn':
                 state = 2
             else:
