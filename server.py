@@ -22,6 +22,7 @@ k = [ci,ca,si,sa]
 
 # Constants
 fStore = "serverStore\\"
+DEBUG = False
 
 # Place Holders
 conFlag = False
@@ -46,7 +47,8 @@ while True:
             
             # Generate Appropriate Response
             if state == 0:
-                print("start mode")
+                if DEBUG:
+                    print("start mode")
                 # Check Message Integrity
                 if fInd == -1:
                     break
@@ -80,11 +82,13 @@ while True:
                     state = 3
                     conn.close()
                     conFlag = False
-                    print("exit")
+                    if DEBUG:
+                        print("exit")
                 else:
                     state = 0
             elif state == 1:
-                print("upload")
+                if DEBUG:
+                    print("upload")
                 # Check Message Integrity
                 if fInd == -1 or fId != ID or ind+1 != fInd:
                     sendMsg = util.getAckMsg(fId, ind, k[3], k[2])
@@ -107,7 +111,8 @@ while True:
 
                 # Finished writing file
                 if fInd == fSegs:
-                    print("upload finished")
+                    if DEBUG:
+                        print("upload finished")
                     f.close()
 
                     #Set up for end
@@ -115,11 +120,13 @@ while True:
                     sendMsg = util.getEndMsg(fId, k[3], k[2])
                     conn.send(sendMsg)
             elif state == 2:
-                print("download")
+                if DEBUG:
+                    print("download")
             else:
                 conn.close()
                 conFlag = False
-                print("exit")
+                if DEBUG:
+                    print("exit")
             
     conn.close()
     print ('client disconnected')

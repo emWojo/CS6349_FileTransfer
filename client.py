@@ -95,7 +95,6 @@ while True:
                 if rId == fId and msg[0:1] == b'\x00':
                     aInd = int.from_bytes(msg[1:3], 'big')
                     if aInd > ind:
-                        print("SET IND")
                         ind = aInd
                 #End Message
                 elif rId == fId and msg[0:1] == b'\x11':
