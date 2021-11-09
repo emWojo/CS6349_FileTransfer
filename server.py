@@ -123,3 +123,4 @@ while True:
             
     conn.close()
     print ('client disconnected')
+    exit()
