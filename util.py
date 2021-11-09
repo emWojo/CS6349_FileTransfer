@@ -127,6 +127,20 @@ def hmac_256(key, msg):
     outHash.update(inHash.digest())
     return outHash.digest()
 
+# TODO: Use keystream for xor
+"""
+IV 32 byte, K 32 byte, SHA(64 byte) = 32 bytes
+START MSG: 32 byte enc msg, 32 byte IV 
+ACK MSG: For start include IV
+ACK MSG: Stream....
+DATA MSG: 32 bye enc msg, 32 byte hash
+
+c1 = p1 XOR SHA(K, IV)
+c2 = p2 XOR SHA(K, c1)
+.
+.
+cn = pn XOR SHA(K, cn-1)
+"""
 def encode(key, msg):
     if len(key) > 64:
         print("Error: Key must be <= 64 bytes (512 bits) long")
@@ -137,7 +151,14 @@ def encode(key, msg):
 
     encMsg = xor_byte(padKey, padMsg)
     return encMsg
-
+# TODO: Use Keysream for xor
+"""
+p1 = c1 XOR SHA(K, IV)
+p2 = c2 XOR SHA(K, c1)
+.
+.
+pn = cn XOR SHA(K, cn-1)
+"""
 def decode(key, ecMsg):
     padKey = key + b'\x00' * (64 - len(key))
     msg = xor_byte(padKey, ecMsg)
