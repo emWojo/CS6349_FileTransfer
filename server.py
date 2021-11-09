@@ -59,6 +59,7 @@ while True:
                     fSegs = math.ceil(fLength/58)
                     fName = msg[5:].decode('ascii').strip("\x00")
                     ID = fId
+                    ind = 0
                     cache = {}
                     f = open(fStore+fName, "wb")
 

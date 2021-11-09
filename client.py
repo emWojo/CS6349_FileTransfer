@@ -67,6 +67,7 @@ while True:
             contents = contents[58:]
             tmpI+=1
 
+        print(cache)
         # Send Start Msg
         s.send(sendMsg)
 
