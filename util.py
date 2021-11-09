@@ -1,6 +1,5 @@
 import hashlib
 import secrets
-import math
 
 def getDecMsg(rMsg, conKey, intKey):
     checkMsg = rMsg[:32]
@@ -80,6 +79,7 @@ def getAckMsg(fId, aInd, conKey, intKey):
 
 def getStartMsg(fLength, fName, op, conKey, intKey):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Segement Number, 55 Byte File Name = 64 Bytes
+    # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 4 Byte File Length, 53 Byte File Name = 64 Bytes
 
     fInd = 0
     fIndByte = fInd.to_bytes(2, 'big')
@@ -92,10 +92,10 @@ def getStartMsg(fLength, fName, op, conKey, intKey):
         #Download
         mType = b"\x10"
 
-    fSegs = math.ceil(fLength/58)
-    fSegsByte = fSegs.to_bytes(2, 'big')
+    #fSegs = math.ceil(fLength/58)
+    fLengthByte = fLength.to_bytes(4, 'big')
     
-    msg = b"".join([fIndByte, fId, mType, fSegsByte, bytes(fName, 'ascii')])
+    msg = b"".join([fIndByte, fId, mType, fLengthByte, bytes(fName, 'ascii')])
 
     return getSendMsg(msg, conKey, intKey), fId
 

@@ -1,3 +1,4 @@
+"""
 # Test User input reading
 usage = "Usage:\n\thelp\n\tupload \"[file]\"\n\tdownload \"[file]\"\n\texit"
 print("Program Started")
@@ -30,15 +31,23 @@ while True:
         print("Error: Unrecognized command")
         print(usage)
     
-
+"""
 
 # Test Files Byte Transfer
-"""
-with open('clientStore\\test.txt', 'rb') as f:
+import math
+with open('clientStore\\test.docx', 'rb') as f:
     contents = f.read()
+    print(len(contents))
 
-f = open("serverStore\\test.txt", "wb")
-bytes = contents
-f.write(bytes)
+f = open("serverStore\\test.docx", "wb")
+while len(contents) > 0:
+    bytes = contents[:64]
+    contents = contents[64:]
+    
+    bytes = bytes + b'\x00' * (64-len(bytes))
+    if len(contents) == 0:
+        bytes = bytes.strip(b"\x00")
+    
+    f.write(bytes)
 f.close()
-"""
+

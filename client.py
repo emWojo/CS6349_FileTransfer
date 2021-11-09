@@ -34,8 +34,8 @@ while True:
         print(usage)
     elif inp[0] == "upload":
         fName = inp[1]
-        if len(fName) > 55:
-            print("File name cannot be > 55 bytes in length")
+        if len(fName) > 53:
+            print("File name cannot be > 53 bytes in length")
             continue
         try:
             f = open(fStore+fName, 'rb')

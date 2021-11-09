@@ -29,6 +29,7 @@ state = 0 # 0-Start 1-Upload 2-Download 3-End
 
 f = None # File Upload/Download Buffer
 fSegs = 0 # Tracks how many file segs to rcv
+fLength = 0
 
 ind = 0 # Track last accurate seg index
 ID = -1 # Place holder for file id
@@ -54,8 +55,9 @@ while True:
                 if mType == b'\x01':
                     #Set up for upload    
                     state = 1
-                    fSegs = int.from_bytes(msg[1:3], 'big')
-                    fName = msg[3:].decode('ascii').strip("\x00")
+                    fLength = int.from_bytes(msg[1:5], 'big')
+                    fSegs = math.ceil(fLength/58)
+                    fName = msg[5:].decode('ascii').strip("\x00")
                     ID = fId
                     cache = {}
                     f = open(fStore+fName, "wb")
@@ -88,9 +90,19 @@ while True:
                     conn.send(sendMsg)
                     break
 
+                #Remove 0 Pad on last msg
+                if fInd == fSegs:
+                    padLen = ((fSegs*58) - fLength)
+                    msg =  msg[:len(msg)-padLen]
+
                 # Write File
                 ind = fInd
                 f.write(msg)
+
+                # Send Ack for 15 msgs
+                if len(data) == 0:
+                    sendMsg = util.getAckMsg(fId, ind, k[3], k[2])
+                    conn.send(sendMsg)
 
                 # Finished writing file
                 if fInd == fSegs:
