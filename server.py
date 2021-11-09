@@ -1,5 +1,7 @@
 import socket
 import util
+import math
+import secrets
 
 HOST = '0.0.0.0'
 PORT = 6265
@@ -18,77 +20,93 @@ sa = b'\x0e' * 64 #Server Auth
 k = [ci,ca,si,sa]
 #k = ci
 
-#TODO: bad integ handling for client and server
-#TODO: Socket Close out need an exit message
+# Constants
+fStore = "serverStore\\"
 
-# 0-No Mode 1-Upload 2-Download
-state = 0
-ind = None
-rounds = None
-f = None
+# Place Holders
+conFlag = False
+state = 0 # 0-Start 1-Upload 2-Download 3-End
+
+f = None # File Upload/Download Buffer
+fSegs = 0 # Tracks how many file segs to rcv
+
+ind = 0 # Track last accurate seg index
+ID = -1 # Place holder for file id
 
 while True:
     conn, addr = s.accept()
-    while True:
+    conFlag = True
+    while conFlag:
+        # Decode a Message
+        data = conn.recv(1460)
+        while len(data) >= 96:
+            fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0])
+            data = data[96:]
+            
+            # Generate Appropriate Response
+            if state == 0:
+                print("start mode")
+                # Check Message Integrity
+                if fInd == -1:
+                    break
+                mType = msg[0:1]
 
-        data = conn.recv(4096)
-        checkMsg = data[:32]
-        encMsg = data[32:]
-        hashMsg = util.hmac_256(k[0], encMsg)
+                if mType == b'\x01':
+                    #Set up for upload    
+                    state = 1
+                    fSegs = int.from_bytes(msg[1:3], 'big')
+                    fName = msg[3:].decode('ascii').strip("\x00")
+                    ID = fId
+                    cache = {}
+                    f = open(fStore+fName, "wb")
 
-        if(checkMsg == hashMsg):
-            print("good integ")
-            msg = util.decode(k[1],encMsg)
-            print(msg)
-            print(len(msg))
-            ind = int.from_bytes(msg[:4], 'big')
-            ind += 1
-            outFlag = b'ak'
-            indByte = ind.to_bytes(4, 'big')
+                    #Ack the start message
+                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2])
+                    conn.send(sendMsg)
+                elif mType == b'\x10':
+                    #Set up for download
+                    state = 2
+                    fName = msg[3:].decode('ascii').strip("\x00")
+                    ID = fId
+                    f = open(fStore+fName, "rb")
 
-            newMsg = b"".join([indByte, outFlag])
-            encMsg = util.encode(k[3], newMsg)
-            hashMsg = util.hmac_256(k[2], encMsg)
-            sendMsg = b"".join([hashMsg, encMsg])
-            conn.send(sendMsg)
-        else:
-            print("bad integ")
-            outFlag = b'ak'
-            errInd = 0
-            indByte = errInd.to_bytes(4, 'big')
+                    #Ack the start message
+                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2])
+                    conn.send(sendMsg)
+                elif mType == b'\x0f':
+                    state = 3
+                    conn.close()
+                    conFlag = False
+                    print("exit")
+                else:
+                    state = 0
+            elif state == 1:
+                print("upload")
+                # Check Message Integrity
+                if fInd == -1 or fId != ID or ind+1 != fInd:
+                    sendMsg = util.getAckMsg(fId, ind, k[3], k[2])
+                    conn.send(sendMsg)
+                    break
 
-            newMsg = b"".join([indByte, outFlag])
-            encMsg = util.encode(k[3], newMsg)
-            hashMsg = util.hmac_256(k[2], encMsg)
-            sendMsg = b"".join([hashMsg, encMsg])
-            conn.send(sendMsg)
-        if state == 0:
-            print("no mode")
-            rounds = int.from_bytes(msg[6:10], 'big')
-            flag = msg[4:6]
-            print(flag)
-            if flag == b'up':
-                state = 1
-                f = open("sample.txt", "wb")
-            elif flag == b'dn':
-                state = 2
+                # Write File
+                ind = fInd
+                f.write(msg)
+
+                # Finished writing file
+                if fInd == fSegs:
+                    print("upload finished")
+                    f.close()
+
+                    #Set up for end
+                    state = 0
+                    sendMsg = util.getEndMsg(fId, k[3], k[2])
+                    conn.send(sendMsg)
+            elif state == 2:
+                print("download")
             else:
-                state = 0
-        elif state == 1:
-            print("upload")
-            print(msg)
-            bytes = msg[4:]
-            f.write(bytes)
-            if ind == rounds*2+1:
-                print("upload finished")
-                f.close()
-                state = 0
-        else:
-            print("download")
+                conn.close()
+                conFlag = False
+                print("exit")
+            
     conn.close()
     print ('client disconnected')
-
-
-
-
-
