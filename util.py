@@ -62,7 +62,7 @@ def getStartAckMsg(fId, aInd, conKey, intKey):
 
     IV = secrets.token_bytes(32)
 
-    return getSendMsg(msg, conKey, intKey, 0, IV)
+    return getSendMsg(msg, conKey, intKey, 1, IV)
 
 def getAckMsg(fId, aInd, conKey, intKey, IV):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Ack Index, 55 byte pad = 64 Bytes
