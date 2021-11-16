@@ -33,7 +33,9 @@ def getExitMsg(conKey, intKey, IV):
 
     msg = b"".join([fIndByte, fId, mType])
 
-    return getSendMsg(msg, conKey, intKey, 0, IV)
+    IV = secrets.token_bytes(32)
+
+    return getSendMsg(msg, conKey, intKey, 1, IV)
 
 
 def getEndMsg(fId, conKey, intKey, IV):
@@ -143,20 +145,29 @@ c2 = p2 XOR SHA(K, c1)
 cn = pn XOR SHA(K, cn-1)
 """
 def encode(key, msg, mode, IV):
-    if len(key) > 64:
+    if len(key) > 32:
         print("Error: Key must be <= 32 bytes (128 bits) long")
     if len(msg) > 64:
         print("Error: Msg must be <= 64 bytes (256 bits) long")
     if mode == 1: #Gen 1 Key (Start MSG)
-        padKey = key + b'\x00' * (64 - len(key))
-        padMsg = msg + b'\x00' * (64 - len(msg))
-        encMsg = xor_byte(padKey, padMsg)
-        return encMsg
+        padKey = key + b'\x00' * (32 - len(key))
+        dig = hashlib.sha256(padKey)
+        dig.update(IV)
+        padMsg = msg + b'\x00' * (32 - len(msg))
+        encMsg = xor_byte(dig.digest(), padMsg)
+        return encMsg + IV
     else: #Gen 2 Key
-        padKey = key + b'\x00' * (64 - len(key))
+        padKey = key + b'\x00' * (32 - len(key))
+        dig = hashlib.sha256(padKey)
+        dig.update(IV)
         padMsg = msg + b'\x00' * (64 - len(msg))
-        encMsg = xor_byte(padKey, padMsg)
-        return encMsg
+        padMsgH = padMsg[:32]
+        padMsgL = padMsg[32:]
+        encMsgH = xor_byte(dig.digest(), padMsgH)
+        dig = hashlib.sha256(padKey)
+        dig.update(encMsgH)
+        encMsgL = xor_byte(dig.digest(), padMsgL)
+        return encMsgH + encMsgL
     
 # TODO: Use Keysream for xor
 """
@@ -168,13 +179,24 @@ pn = cn XOR SHA(K, cn-1)
 """
 def decode(key, ecMsg, mode, IV):
     if mode == 1: #Gen 1 Key (Start MSG)
-        padKey = key + b'\x00' * (64 - len(key))
-        msg = xor_byte(padKey, ecMsg)
+        padKey = key + b'\x00' * (32 - len(key))
+        ecMsgH = ecMsg[:32]
+        IV = ecMsg[32:]
+        dig = hashlib.sha256(padKey)
+        dig.update(IV)
+        msg = xor_byte(dig.digest(), ecMsgH)
         return msg
     else: #Gen 2 Key
-        padKey = key + b'\x00' * (64 - len(key))
-        msg = xor_byte(padKey, ecMsg)
-        return msg
+        padKey = key + b'\x00' * (32 - len(key))
+        ecMsgH = ecMsg[:32]
+        ecMsgL = ecMsg[32:]
+        dig = hashlib.sha256(padKey)
+        dig.update(IV)
+        msgH = xor_byte(dig.digest(), ecMsgH)
+        dig = hashlib.sha256(padKey)
+        dig.update(ecMsgH)
+        msgL = xor_byte(dig.digest(), ecMsgL)
+        return msgH + msgL
 
 def xor_byte(strA, strB):
     return bytes([a ^ b for a, b in zip(strA, strB)])

@@ -3,7 +3,7 @@ import util
 
 HOST = '127.0.0.1'
 PORT = 6265
-DEBUG_MODE = True
+DEBUG = True
 
 print("Client Running")
 
@@ -13,9 +13,9 @@ s.settimeout(1)
 
 #TODO: AUTH and KEY GEN Goes HERE
 ci = b'\x0b' * 64 #Client Integrity
-ca = b'\x0c' * 64 #Client Auth
+ca = b'\x0c' * 32 #Client Auth
 si = b'\x0d' * 64 #Server Integrity
-sa = b'\x0e' * 64 #Server Auth
+sa = b'\x0e' * 32 #Server Auth
 k = [ci,ca,si,sa]
 #k = ci
 
@@ -25,6 +25,8 @@ fStore = "clientStore\\"
 
 # Place Holders
 f = None #File Upload/Download Buffer
+cIV = None
+sIV = None
 
 print("Program Started")
 print(usage)
@@ -57,8 +59,6 @@ while True:
         print("Upload",fStore+inp[1],"Starting...")
 
         # Prep Start Msg
-        cIV = None
-        sIV = None
         sendMsg, fId = util.getStartMsg(fLength, fName, 0,k[1], k[0])
         cIV = sendMsg[32:64]
 

@@ -14,15 +14,15 @@ s.listen(5)
 
 #TODO: AUTH and KEY GEN Goes HERE
 ci = b'\x0b' * 64 #Client Integrity
-ca = b'\x0c' * 64 #Client Auth
+ca = b'\x0c' * 32 #Client Auth
 si = b'\x0d' * 64 #Server Integrity
-sa = b'\x0e' * 64 #Server Auth
+sa = b'\x0e' * 32 #Server Auth
 k = [ci,ca,si,sa]
 #k = ci
 
 # Constants
 fStore = "serverStore\\"
-DEBUG = False
+DEBUG = True
 
 # Place Holders
 conFlag = False
