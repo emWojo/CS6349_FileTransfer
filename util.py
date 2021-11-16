@@ -1,43 +1,28 @@
 import hashlib
 import secrets
 
-def getDecMsg(rMsg, conKey, intKey, mode):
+def getDecMsg(rMsg, conKey, intKey, mode, IV):
     checkMsg = rMsg[:32]
     encMsg = rMsg[32:]
     hashMsg = hmac_256(intKey, encMsg)
 
     if checkMsg == hashMsg:
-        msg = decode(conKey,encMsg, mode)
+        msg = decode(conKey,encMsg, mode, IV)
         fInd = int.from_bytes(msg[:2], 'big')
         fId = msg[2:6]
         return fInd, fId, msg[6:]
     else:
         return -1, None, None
 
-def getErrMsg(err, fId, eInd, conKey, intKey):
-    # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 byte err Ind, 4 byte err Type, 51 byte pad = 64 Bytes
-    fInd = 0
-    fIndByte = fInd.to_bytes(2, 'big')
-
-    mType = b"\xff"
-
-    eType = 0
-    eTypeByte = eType.to_bytes(4, 'big')
-
-    msg = b"".join([fIndByte, fId, mType, eInd, eTypeByte])
-
-    return getSendMsg(msg, conKey, intKey, 0)
-
-
-def getDataMsg(fInd, fId, fData, conKey, intKey):
+def getDataMsg(fInd, fId, fData, conKey, intKey, IV):
     # 2 Byte Index, 4 Byte File Id, 58 byte file data = 64 Bytes
     fIndByte = fInd.to_bytes(2, 'big')
 
     msg = b"".join([fIndByte, fId, fData])
 
-    return getSendMsg(msg, conKey, intKey, 0)
+    return getSendMsg(msg, conKey, intKey, 0, IV)
 
-def getExitMsg(conKey, intKey):
+def getExitMsg(conKey, intKey, IV):
     # 2 Byte Index, 4 Byte F, 1 Byte message Type, 57 byte pad = 64 Bytes
     fInd = 0
     fIndByte = fInd.to_bytes(2, 'big')
@@ -48,10 +33,10 @@ def getExitMsg(conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType])
 
-    return getSendMsg(msg, conKey, intKey, 0)
+    return getSendMsg(msg, conKey, intKey, 0, IV)
 
 
-def getEndMsg(fId, conKey, intKey):
+def getEndMsg(fId, conKey, intKey, IV):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 57 byte pad = 64 Bytes
 
     fInd = 0
@@ -61,9 +46,9 @@ def getEndMsg(fId, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType])
 
-    return getSendMsg(msg, conKey, intKey, 0)
+    return getSendMsg(msg, conKey, intKey, 0, IV)
 
-def getAckMsg(fId, aInd, conKey, intKey):
+def getAckMsg(fId, aInd, conKey, intKey, IV):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Ack Index, 55 byte pad = 64 Bytes
 
     fInd = 0
@@ -75,7 +60,7 @@ def getAckMsg(fId, aInd, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType, aIndByte])
 
-    return getSendMsg(msg, conKey, intKey, 0)
+    return getSendMsg(msg, conKey, intKey, 0, IV)
 
 def getStartMsg(fLength, fName, op, conKey, intKey):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 4 Byte File Length, 53 Byte File Name = 64 Bytes
@@ -95,10 +80,12 @@ def getStartMsg(fLength, fName, op, conKey, intKey):
     
     msg = b"".join([fIndByte, fId, mType, fLengthByte, bytes(fName, 'ascii')])
 
-    return getSendMsg(msg, conKey, intKey, 1), fId
+    IV = 0
 
-def getSendMsg(msg, conKey, intKey, mode):
-    encMsg = encode(conKey, msg, mode)
+    return getSendMsg(msg, conKey, intKey, 1, IV), fId, IV
+
+def getSendMsg(msg, conKey, intKey, mode, IV):
+    encMsg = encode(conKey, msg, mode, IV)
     hashMsg = hmac_256(intKey, encMsg)
     return b"".join([hashMsg, encMsg])
 
@@ -139,7 +126,7 @@ c2 = p2 XOR SHA(K, c1)
 .
 cn = pn XOR SHA(K, cn-1)
 """
-def encode(key, msg, mode):
+def encode(key, msg, mode, IV):
     if len(key) > 64:
         print("Error: Key must be <= 64 bytes (512 bits) long")
     if len(msg) > 64:
@@ -163,7 +150,7 @@ p2 = c2 XOR SHA(K, c1)
 .
 pn = cn XOR SHA(K, cn-1)
 """
-def decode(key, ecMsg, mode):
+def decode(key, ecMsg, mode, IV):
     if mode == 1: #Gen 1 Key (Start MSG)
         padKey = key + b'\x00' * (64 - len(key))
         msg = xor_byte(padKey, ecMsg)

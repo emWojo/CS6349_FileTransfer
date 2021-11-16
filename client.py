@@ -57,12 +57,12 @@ while True:
         print("Upload",fStore+inp[1],"Starting...")
 
         # Prep Start Msg
-        sendMsg, fId = util.getStartMsg(fLength, fName, 0,k[1], k[0])
+        sendMsg, fId, IV = util.getStartMsg(fLength, fName, 0,k[1], k[0])
 
         # Write file to cache
         tmpI = 1
         while len(contents) > 0:
-            interMsg = util.getDataMsg(tmpI, fId, contents[:58], k[1], k[0])
+            interMsg = util.getDataMsg(tmpI, fId, contents[:58], k[1], k[0], IV)
             cache[tmpI] = interMsg
             contents = contents[58:]
             tmpI+=1
@@ -74,7 +74,7 @@ while True:
         while True:
             try:
                 data = s.recv(1460)
-                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0)
+                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0, IV)
                 if rInd == 0 and rId == fId and msg[0:1] == b'\x00' and msg[1:3] == b'\x00\x00':
                     break
             except socket.timeout as e:
@@ -90,7 +90,7 @@ while True:
 
             try: 
                 data = s.recv(1460)
-                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0)
+                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0, IV)
                 #Ack Message
                 if rId == fId and msg[0:1] == b'\x00':
                     aInd = int.from_bytes(msg[1:3], 'big')
@@ -112,7 +112,7 @@ while True:
         print("Error: Unrecognized command")
         print(usage)
 
-sendMsg = util.getExitMsg(k[1], k[0])
+sendMsg = util.getExitMsg(k[1], k[0], IV)
 s.send(sendMsg)
 s.close()
 

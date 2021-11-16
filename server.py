@@ -35,6 +35,8 @@ fLength = 0
 ind = 0 # Track last accurate seg index
 ID = -1 # Place holder for file id
 
+IV = 0
+
 while True:
     conn, addr = s.accept()
     conFlag = True
@@ -44,10 +46,10 @@ while True:
         while len(data) >= 96:
             fInd = fId = msg = None
             if state == 0:
-                fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 1)
+                fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 1, IV)
                 data = data[96:]
             else:
-                fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 0)
+                fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 0, IV)
                 data = data[96:]
             
             # Generate Appropriate Response
@@ -71,7 +73,7 @@ while True:
                     f = open(fStore+fName, "wb")
 
                     #Ack the start message
-                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2])
+                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2], IV)
                     conn.send(sendMsg)
                 elif mType == b'\x10':
                     #Set up for download
@@ -81,7 +83,7 @@ while True:
                     f = open(fStore+fName, "rb")
 
                     #Ack the start message
-                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2])
+                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2], IV)
                     conn.send(sendMsg)
                 elif mType == b'\x0f':
                     state = 3
@@ -96,7 +98,7 @@ while True:
                     print("upload")
                 # Check Message Integrity
                 if fInd == -1 or fId != ID or ind+1 != fInd:
-                    sendMsg = util.getAckMsg(fId, ind, k[3], k[2])
+                    sendMsg = util.getAckMsg(fId, ind, k[3], k[2], IV)
                     conn.send(sendMsg)
                     break
 
@@ -111,7 +113,7 @@ while True:
 
                 # Send Ack for 15 msgs
                 if len(data) == 0:
-                    sendMsg = util.getAckMsg(fId, ind, k[3], k[2])
+                    sendMsg = util.getAckMsg(fId, ind, k[3], k[2], IV)
                     conn.send(sendMsg)
 
                 # Finished writing file
@@ -122,7 +124,7 @@ while True:
 
                     #Set up for end
                     state = 0
-                    sendMsg = util.getEndMsg(fId, k[3], k[2])
+                    sendMsg = util.getEndMsg(fId, k[3], k[2], IV)
                     conn.send(sendMsg)
             elif state == 2:
                 if DEBUG:
