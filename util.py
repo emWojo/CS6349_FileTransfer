@@ -48,6 +48,22 @@ def getEndMsg(fId, conKey, intKey, IV):
 
     return getSendMsg(msg, conKey, intKey, 0, IV)
 
+def getStartAckMsg(fId, aInd, conKey, intKey):
+    # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Ack Index, 55 byte pad = 64 Bytes
+
+    fInd = 0
+    fIndByte = fInd.to_bytes(2, 'big')
+
+    mType = b"\x00"
+
+    aIndByte = aInd.to_bytes(2, 'big')
+
+    msg = b"".join([fIndByte, fId, mType, aIndByte])
+
+    IV = 0
+
+    return getSendMsg(msg, conKey, intKey, 0, IV), IV
+
 def getAckMsg(fId, aInd, conKey, intKey, IV):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Ack Index, 55 byte pad = 64 Bytes
 

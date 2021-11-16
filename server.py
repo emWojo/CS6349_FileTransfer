@@ -73,7 +73,7 @@ while True:
                     f = open(fStore+fName, "wb")
 
                     #Ack the start message
-                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2], IV)
+                    sendMsg, IV = util.getStartAckMsg(fId, fInd, k[3], k[2])
                     conn.send(sendMsg)
                 elif mType == b'\x10':
                     #Set up for download
