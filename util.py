@@ -60,9 +60,9 @@ def getStartAckMsg(fId, aInd, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType, aIndByte])
 
-    IV = 0
+    IV = secrets.token_bytes(32)
 
-    return getSendMsg(msg, conKey, intKey, 0, IV), IV
+    return getSendMsg(msg, conKey, intKey, 0, IV)
 
 def getAckMsg(fId, aInd, conKey, intKey, IV):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Ack Index, 55 byte pad = 64 Bytes
@@ -96,9 +96,9 @@ def getStartMsg(fLength, fName, op, conKey, intKey):
     
     msg = b"".join([fIndByte, fId, mType, fLengthByte, bytes(fName, 'ascii')])
 
-    IV = 0
+    IV = secrets.token_bytes(32)
 
-    return getSendMsg(msg, conKey, intKey, 1, IV), fId, IV
+    return getSendMsg(msg, conKey, intKey, 1, IV), fId
 
 def getSendMsg(msg, conKey, intKey, mode, IV):
     encMsg = encode(conKey, msg, mode, IV)
@@ -144,7 +144,7 @@ cn = pn XOR SHA(K, cn-1)
 """
 def encode(key, msg, mode, IV):
     if len(key) > 64:
-        print("Error: Key must be <= 64 bytes (512 bits) long")
+        print("Error: Key must be <= 32 bytes (128 bits) long")
     if len(msg) > 64:
         print("Error: Msg must be <= 64 bytes (256 bits) long")
     if mode == 1: #Gen 1 Key (Start MSG)
