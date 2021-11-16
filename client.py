@@ -74,7 +74,7 @@ while True:
         while True:
             try:
                 data = s.recv(1460)
-                rInd, rId, msg = util.getDecMsg(data, k[3], k[2])
+                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0)
                 if rInd == 0 and rId == fId and msg[0:1] == b'\x00' and msg[1:3] == b'\x00\x00':
                     break
             except socket.timeout as e:
@@ -90,7 +90,7 @@ while True:
 
             try: 
                 data = s.recv(1460)
-                rInd, rId, msg = util.getDecMsg(data, k[3], k[2])
+                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0)
                 #Ack Message
                 if rId == fId and msg[0:1] == b'\x00':
                     aInd = int.from_bytes(msg[1:3], 'big')

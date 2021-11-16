@@ -1,13 +1,13 @@
 import hashlib
 import secrets
 
-def getDecMsg(rMsg, conKey, intKey):
+def getDecMsg(rMsg, conKey, intKey, mode):
     checkMsg = rMsg[:32]
     encMsg = rMsg[32:]
     hashMsg = hmac_256(intKey, encMsg)
 
     if checkMsg == hashMsg:
-        msg = decode(conKey,encMsg)
+        msg = decode(conKey,encMsg, mode)
         fInd = int.from_bytes(msg[:2], 'big')
         fId = msg[2:6]
         return fInd, fId, msg[6:]
@@ -26,7 +26,7 @@ def getErrMsg(err, fId, eInd, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType, eInd, eTypeByte])
 
-    return getSendMsg(msg, conKey, intKey)
+    return getSendMsg(msg, conKey, intKey, 0)
 
 
 def getDataMsg(fInd, fId, fData, conKey, intKey):
@@ -35,7 +35,7 @@ def getDataMsg(fInd, fId, fData, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, fData])
 
-    return getSendMsg(msg, conKey, intKey)
+    return getSendMsg(msg, conKey, intKey, 0)
 
 def getExitMsg(conKey, intKey):
     # 2 Byte Index, 4 Byte F, 1 Byte message Type, 57 byte pad = 64 Bytes
@@ -48,7 +48,7 @@ def getExitMsg(conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType])
 
-    return getSendMsg(msg, conKey, intKey)
+    return getSendMsg(msg, conKey, intKey, 0)
 
 
 def getEndMsg(fId, conKey, intKey):
@@ -61,7 +61,7 @@ def getEndMsg(fId, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType])
 
-    return getSendMsg(msg, conKey, intKey)
+    return getSendMsg(msg, conKey, intKey, 0)
 
 def getAckMsg(fId, aInd, conKey, intKey):
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Ack Index, 55 byte pad = 64 Bytes
@@ -75,10 +75,9 @@ def getAckMsg(fId, aInd, conKey, intKey):
 
     msg = b"".join([fIndByte, fId, mType, aIndByte])
 
-    return getSendMsg(msg, conKey, intKey)
+    return getSendMsg(msg, conKey, intKey, 0)
 
 def getStartMsg(fLength, fName, op, conKey, intKey):
-    # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 2 Byte Segement Number, 55 Byte File Name = 64 Bytes
     # 2 Byte Index, 4 Byte File Id, 1 Byte message Type, 4 Byte File Length, 53 Byte File Name = 64 Bytes
 
     fInd = 0
@@ -92,15 +91,14 @@ def getStartMsg(fLength, fName, op, conKey, intKey):
         #Download
         mType = b"\x10"
 
-    #fSegs = math.ceil(fLength/58)
     fLengthByte = fLength.to_bytes(4, 'big')
     
     msg = b"".join([fIndByte, fId, mType, fLengthByte, bytes(fName, 'ascii')])
 
-    return getSendMsg(msg, conKey, intKey), fId
+    return getSendMsg(msg, conKey, intKey, 1), fId
 
-def getSendMsg(msg, conKey, intKey):
-    encMsg = encode(conKey, msg)
+def getSendMsg(msg, conKey, intKey, mode):
+    encMsg = encode(conKey, msg, mode)
     hashMsg = hmac_256(intKey, encMsg)
     return b"".join([hashMsg, encMsg])
 
@@ -141,16 +139,22 @@ c2 = p2 XOR SHA(K, c1)
 .
 cn = pn XOR SHA(K, cn-1)
 """
-def encode(key, msg):
+def encode(key, msg, mode):
     if len(key) > 64:
         print("Error: Key must be <= 64 bytes (512 bits) long")
     if len(msg) > 64:
         print("Error: Msg must be <= 64 bytes (256 bits) long")
-    padKey = key + b'\x00' * (64 - len(key))
-    padMsg = msg + b'\x00' * (64 - len(msg))
-
-    encMsg = xor_byte(padKey, padMsg)
-    return encMsg
+    if mode == 1: #Gen 1 Key (Start MSG)
+        padKey = key + b'\x00' * (64 - len(key))
+        padMsg = msg + b'\x00' * (64 - len(msg))
+        encMsg = xor_byte(padKey, padMsg)
+        return encMsg
+    else: #Gen 2 Key
+        padKey = key + b'\x00' * (64 - len(key))
+        padMsg = msg + b'\x00' * (64 - len(msg))
+        encMsg = xor_byte(padKey, padMsg)
+        return encMsg
+    
 # TODO: Use Keysream for xor
 """
 p1 = c1 XOR SHA(K, IV)
@@ -159,10 +163,15 @@ p2 = c2 XOR SHA(K, c1)
 .
 pn = cn XOR SHA(K, cn-1)
 """
-def decode(key, ecMsg):
-    padKey = key + b'\x00' * (64 - len(key))
-    msg = xor_byte(padKey, ecMsg)
-    return msg
+def decode(key, ecMsg, mode):
+    if mode == 1: #Gen 1 Key (Start MSG)
+        padKey = key + b'\x00' * (64 - len(key))
+        msg = xor_byte(padKey, ecMsg)
+        return msg
+    else: #Gen 2 Key
+        padKey = key + b'\x00' * (64 - len(key))
+        msg = xor_byte(padKey, ecMsg)
+        return msg
 
 def xor_byte(strA, strB):
     return bytes([a ^ b for a, b in zip(strA, strB)])

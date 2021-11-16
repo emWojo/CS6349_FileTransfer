@@ -33,6 +33,7 @@ while True:
     
 """
 
+"""
 # Test Files Byte Transfer
 import math
 with open('clientStore\\test.docx', 'rb') as f:
@@ -50,4 +51,23 @@ while len(contents) > 0:
     
     f.write(bytes)
 f.close()
+"""
+with open('clientStore\\test.docx', 'rb') as f:
+    contents = f.read()
+    print(len(contents) > 1703910)
 
+with open('clientStore\\test.txt', 'rb') as f:
+    contents = f.read()
+    print(len(contents) > 1703910)
+
+with open('clientStore\\test.jpg', 'rb') as f:
+    contents = f.read()
+    print(len(contents) > 1703910)
+
+with open('clientStore\\test.pdf', 'rb') as f:
+    contents = f.read()
+    print(len(contents) > 1703910)
+
+with open('clientStore\\ex.py', 'rb') as f:
+    contents = f.read()
+    print(len(contents) > 1703910)

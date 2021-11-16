@@ -42,8 +42,13 @@ while True:
         # Decode a Message
         data = conn.recv(1460)
         while len(data) >= 96:
-            fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0])
-            data = data[96:]
+            fInd = fId = msg = None
+            if state == 0:
+                fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 1)
+                data = data[96:]
+            else:
+                fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 0)
+                data = data[96:]
             
             # Generate Appropriate Response
             if state == 0:
