@@ -60,11 +60,13 @@ while True:
         cIV = None
         sIV = None
         sendMsg, fId = util.getStartMsg(fLength, fName, 0,k[1], k[0])
+        cIV = sendMsg[32:64]
 
         # Write file to cache
         tmpI = 1
         while len(contents) > 0:
             interMsg = util.getDataMsg(tmpI, fId, contents[:58], k[1], k[0], cIV)
+            cIV = interMsg[64:96]
             cache[tmpI] = interMsg
             contents = contents[58:]
             tmpI+=1
@@ -76,7 +78,8 @@ while True:
         while True:
             try:
                 data = s.recv(1460)
-                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0, sIV)
+                sIV = data[32:64]
+                rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 1, sIV)
                 if rInd == 0 and rId == fId and msg[0:1] == b'\x00' and msg[1:3] == b'\x00\x00':
                     break
             except socket.timeout as e:
@@ -92,7 +95,9 @@ while True:
 
             try: 
                 data = s.recv(1460)
+                tsIV = data[64:96]
                 rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0, sIV)
+                sIV = tsIV
                 #Ack Message
                 if rId == fId and msg[0:1] == b'\x00':
                     aInd = int.from_bytes(msg[1:3], 'big')

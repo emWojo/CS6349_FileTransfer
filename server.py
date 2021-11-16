@@ -47,10 +47,13 @@ while True:
         while len(data) >= 96:
             fInd = fId = msg = None
             if state == 0:
+                cIV = data[32:64]
                 fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 1, cIV)
                 data = data[96:]
             else:
+                tcIV = data[64:96]
                 fInd, fId, msg = util.getDecMsg(data[:96], k[1], k[0], 0, cIV)
+                cIV = tcIV
                 data = data[96:]
             
             # Generate Appropriate Response
@@ -75,6 +78,7 @@ while True:
 
                     #Ack the start message
                     sendMsg = util.getStartAckMsg(fId, fInd, k[3], k[2])
+                    sIV = sendMsg[32:64]
                     conn.send(sendMsg)
                 elif mType == b'\x10':
                     #Set up for download
@@ -84,7 +88,8 @@ while True:
                     f = open(fStore+fName, "rb")
 
                     #Ack the start message
-                    sendMsg = util.getAckMsg(fId, fInd, k[3], k[2], sIV)
+                    sendMsg = util.getStartAckMsg(fId, fInd, k[3], k[2], sIV)
+                    sIV = sendMsg[64:96]
                     conn.send(sendMsg)
                 elif mType == b'\x0f':
                     state = 3
@@ -100,6 +105,7 @@ while True:
                 # Check Message Integrity
                 if fInd == -1 or fId != ID or ind+1 != fInd:
                     sendMsg = util.getAckMsg(fId, ind, k[3], k[2], sIV)
+                    sIV = sendMsg[64:96]
                     conn.send(sendMsg)
                     break
 
@@ -115,6 +121,7 @@ while True:
                 # Send Ack for 15 msgs
                 if len(data) == 0:
                     sendMsg = util.getAckMsg(fId, ind, k[3], k[2], sIV)
+                    sIV = sendMsg[64:96]
                     conn.send(sendMsg)
 
                 # Finished writing file
