@@ -17,7 +17,6 @@ s.listen(60)
 with open('keys/privkey.pem', 'rb') as file:
     privKey = rsa.PrivateKey.load_pkcs1(file.read())
 
-#TODO: AUTH and KEY GEN Goes HERE
 ci = b'\x0b' * 64 #Client Integrity
 ca = b'\x0c' * 64 #Client Auth
 si = b'\x0d' * 64 #Server Integrity
@@ -48,7 +47,28 @@ sIV = None
 
 while True:
     conn, addr = s.accept()
+    # Authenticate
+    data = conn.recv(4096)
+    msg = util.signChalMsg(data, privKey)
+    conn.send(msg)
+    
+    # DH
+    #agree on prime send pubkey
+    data = conn.recv(4096)
+    msg = int.from_bytes(data, 'big')
+    p,g = util.get_dh_prime(msg)
+    sec,pub = util.get_dh_secAndpub(p, g)
+    pub_bytes = pub.to_bytes(256, 'big')
+    conn.send(pub_bytes)
 
+    #get client pub key
+    data = conn.recv(4096)
+    cPub = int.from_bytes(data, 'big')
+
+    share = util.get_dh_shared(cPub, sec, p)
+    share_byte = share.to_bytes(256, 'big')
+
+    k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
     conFlag = True
     while conFlag:
         # Decode a Message

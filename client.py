@@ -2,6 +2,7 @@ import socket
 import util
 import rsa
 import math
+import time
 
 HOST = '127.0.0.1'
 PORT = 6265
@@ -13,19 +14,6 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((HOST, PORT))
 s.settimeout(1)
 
-#TODO: AUTH and KEY GEN Goes HERE
-# load public key for the server
-with open('keys/pubkey.pem', 'rb') as file:
-    pubKey = rsa.PublicKey.load_pkcs1(file.read())
-
-
-ci = b'\x0b' * 64 #Client Integrity
-ca = b'\x0c' * 64 #Client Auth
-si = b'\x0d' * 64 #Server Integrity
-sa = b'\x0e' * 64 #Server Auth
-k = [ci,ca,si,sa]
-#k = ci
-
 # Constants
 usage = "Usage:\n\thelp\n\tupload \"[file]\"\n\tdownload \"[file]\"\n\texit"
 fStore = "clientStore\\"
@@ -35,6 +23,40 @@ f = None #File Upload/Download Buffer
 cIV = None
 sIV = None
 
+# Authenticate Server
+with open('keys/pubkey.pem', 'rb') as file:
+    pubKey = rsa.PublicKey.load_pkcs1(file.read())
+
+#challenge
+msg = util.getChalMsg()
+s.send(msg)
+
+#confirm
+data = s.recv(1460)
+ver = util.verify_sha256(msg, data, pubKey)
+if False:
+    print("Could Not Verify Server")
+    s.close()
+    exit()
+
+# Get DH Key
+#agree on prime
+prime = 2048
+msg = prime.to_bytes(4, 'big')
+s.send(msg)
+
+#get server pubkey send pubkey
+data = s.recv(1460)
+sPub = int.from_bytes(data, 'big')
+p,g = util.get_dh_prime(prime)
+sec,pub = util.get_dh_secAndpub(p, g)
+pub_bytes = pub.to_bytes(256, 'big')
+s.send(pub_bytes)
+ 
+share = util.get_dh_shared(sPub, sec, p)
+share_byte = share.to_bytes(256, 'big')
+k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
+    
 print("Program Started")
 print(usage)
 while True:
