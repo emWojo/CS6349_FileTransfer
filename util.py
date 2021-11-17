@@ -145,8 +145,8 @@ c2 = p2 XOR SHA(K, c1)
 cn = pn XOR SHA(K, cn-1)
 """
 def encode(key, msg, mode, IV):
-    if len(key) > 32:
-        print("Error: Key must be <= 32 bytes (128 bits) long")
+    if len(key) > 64:
+        print("Error: Key must be <= 64 bytes (128 bits) long")
     if len(msg) > 64:
         print("Error: Msg must be <= 64 bytes (256 bits) long")
     if mode == 1: #Gen 1 Key (Start MSG)
