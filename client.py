@@ -1,9 +1,11 @@
 import socket
 import util
+import rsa
+import math
 
 HOST = '127.0.0.1'
 PORT = 6265
-DEBUG = True
+DEBUG = False
 
 print("Client Running")
 
@@ -12,6 +14,11 @@ s.connect((HOST, PORT))
 s.settimeout(1)
 
 #TODO: AUTH and KEY GEN Goes HERE
+# load public key for the server
+with open('keys/pubkey.pem', 'rb') as file:
+    pubKey = rsa.PublicKey.load_pkcs1(file.read())
+
+
 ci = b'\x0b' * 64 #Client Integrity
 ca = b'\x0c' * 32 #Client Auth
 si = b'\x0d' * 64 #Server Integrity
@@ -35,6 +42,7 @@ while True:
     if inp[0] == "help":
         print(usage)
     elif inp[0] == "upload":
+        s.settimeout(1)
         fName = inp[1]
         if len(fName) > 53:
             print("File name cannot be > 53 bytes in length")
@@ -99,19 +107,105 @@ while True:
                 rInd, rId, msg = util.getDecMsg(data, k[3], k[2], 0, sIV)
                 sIV = tsIV
                 #Ack Message
-                if rId == fId and msg[0:1] == b'\x00':
+                if rInd != -1 and rId == fId and msg[0:1] == b'\x00':
                     aInd = int.from_bytes(msg[1:3], 'big')
                     if aInd > ind:
                         ind = aInd
                 #End Message
-                elif rId == fId and msg[0:1] == b'\x11':
+                elif rInd != -1 and rId == fId and msg[0:1] == b'\x11':
                     print("Upload Finished")
                     break
             except socket.timeout as e:
                 continue
             
-    elif inp[0] == "download":
-        print("Download",fstore+inp[1],"Starting...")
+    elif inp[0] == "download":    
+        s.settimeout(1)  
+        fName = inp[1]
+        if len(fName) > 53:
+            print("File name cannot be > 53 bytes in length")
+            continue
+        
+        try:
+            f = open(fStore+fName, 'wb')
+        except IOError as e:
+            print(e)
+            continue
+
+        # Track last received file segment
+        ind = 0
+        fLength = None
+        fSegs = None
+
+        print("Download",fStore+inp[1],"Starting...")
+
+        # Prep Start Msg
+        sendMsg, fId = util.getStartMsg(0, fName, 1,k[1], k[0])
+        cIV = sendMsg[32:64]
+        s.send(sendMsg)
+
+        # Wait for Start Msg
+        while True:
+            try:
+                data = s.recv(1460)
+                sIV = data[32:64]
+                rInd, fId, msg = util.getDecMsg(data, k[3], k[2], 1, sIV)
+                if rInd == 0 and msg[0:1] == b'\x10':
+                    fLength = int.from_bytes(msg[1:5], 'big')
+                    fSegs = math.ceil(fLength/58)
+                    break
+            except socket.timeout as e:
+                s.send(sendMsg)
+                print("send start")
+
+        sendMsg = util.getAckMsg(fId, ind, k[1], k[0], cIV)
+        cIV = sendMsg[64:96]
+        s.send(sendMsg)
+
+        s.settimeout(360)
+
+        # Wait for Data
+        flag = True
+        while flag:
+            data = s.recv(1460)
+            s.settimeout(1)
+            while len(data) >= 96:
+                tsIV = data[64:96]
+                rInd, rId, msg = util.getDecMsg(data[:96], k[3], k[2], 0, sIV)
+                sIV = tsIV
+                data = data[96:]
+
+                #If file is bad ack index of last received file that was good
+                if rInd == -1 or rId != fId or ind+1 != rInd:
+                    sendMsg = util.getAckMsg(fId, ind, k[1], k[0], cIV)
+                    cIV = sendMsg[64:96]
+                    s.send(sendMsg)
+                    break
+
+                #Remove 0 Pad on last msg
+                if rInd == fSegs:
+                    padLen = ((fSegs*58) - fLength)
+                    msg =  msg[:len(msg)-padLen]
+
+                # Write File
+                ind = rInd
+                f.write(msg)
+
+                # Send Ack for 15 msgs
+                if len(data) == 0:
+                    sendMsg = util.getAckMsg(fId, ind, k[1], k[0], cIV)
+                    cIV = sendMsg[64:96]
+                    s.send(sendMsg)
+
+                # Finished writing file
+                if rInd == fSegs:
+                    state = 0
+                    print("Download Finished")
+                    f.close()
+                    #Set up for end
+                    sendMsg = util.getEndMsg(fId, k[1], k[0], cIV)
+                    s.send(sendMsg)
+                    flag = False
+                    break
     elif inp[0] == "exit":
         print("Program Exiting...")
         break
