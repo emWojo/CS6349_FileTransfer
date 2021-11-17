@@ -1,24 +1,26 @@
 # CS6349_FileTransfer
 
 ## Directories for Server and Client
-The server directory is assumed to be "serverStore\\" stored in the constant "fStore"
+The server directory is assumed to be `serverStore\\` stored in the constant `fStore`
 
-The client directory is assumed to be "clientStore\\" stored in the constant "fStore"
+The client directory is assumed to be `clientStore\\` stored in the constant `fStore`
 
 ## Get requirements
-py -m pip install -r reqs.txt
+python 3.x
+
+`py -m pip install -r reqs.txt`
 
 ## Run Server First
-py server.py
+`py server.py`
 
 ## Run Client Next
-py client.py
+`py client.py`
 
 ## Client CLI
-help
+`help` - Print Usage
 
-upload [test.txt]
+`upload <test.txt>` - Upload test.txt from client fStore
 
-download [test.txt]
+`download <test.txt>` - Download test.txt from server fStore
 
-exit
+`exit` - Close Server and Client connection
