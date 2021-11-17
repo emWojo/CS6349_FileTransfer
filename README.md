@@ -13,6 +13,9 @@ py client.py
 
 ## Client CLI
 help
+
 upload [test.txt]
+
 download [test.txt]
+
 exit
