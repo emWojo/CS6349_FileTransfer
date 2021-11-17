@@ -151,21 +151,21 @@ def encode(key, msg, mode, IV):
         print("Error: Msg must be <= 64 bytes (256 bits) long")
     if mode == 1: #Gen 1 Key (Start MSG)
         padKey = key + b'\x00' * (32 - len(key))
-        dig = hashlib.sha256(padKey)
-        dig.update(IV)
+        digCon = xor_byte(padKey, (IV+IV))
+        dig = hashlib.sha256(digCon)
         padMsg = msg + b'\x00' * (32 - len(msg))
         encMsg = xor_byte(dig.digest(), padMsg)
         return encMsg + IV
     else: #Gen 2 Key
         padKey = key + b'\x00' * (32 - len(key))
-        dig = hashlib.sha256(padKey)
-        dig.update(IV)
+        digCon = xor_byte(padKey, (IV+IV))
+        dig = hashlib.sha256(digCon)
         padMsg = msg + b'\x00' * (64 - len(msg))
         padMsgH = padMsg[:32]
         padMsgL = padMsg[32:]
         encMsgH = xor_byte(dig.digest(), padMsgH)
-        dig = hashlib.sha256(padKey)
-        dig.update(encMsgH)
+        digCon = xor_byte(padKey, (encMsgH+encMsgH))
+        dig = hashlib.sha256(digCon)
         encMsgL = xor_byte(dig.digest(), padMsgL)
         return encMsgH + encMsgL
     
@@ -182,19 +182,19 @@ def decode(key, ecMsg, mode, IV):
         padKey = key + b'\x00' * (32 - len(key))
         ecMsgH = ecMsg[:32]
         IV = ecMsg[32:]
-        dig = hashlib.sha256(padKey)
-        dig.update(IV)
+        digCon = xor_byte(padKey, (IV+IV))
+        dig = hashlib.sha256(digCon)
         msg = xor_byte(dig.digest(), ecMsgH)
         return msg
     else: #Gen 2 Key
         padKey = key + b'\x00' * (32 - len(key))
         ecMsgH = ecMsg[:32]
         ecMsgL = ecMsg[32:]
-        dig = hashlib.sha256(padKey)
-        dig.update(IV)
+        digCon = xor_byte(padKey, (IV+IV))
+        dig = hashlib.sha256(digCon)
         msgH = xor_byte(dig.digest(), ecMsgH)
-        dig = hashlib.sha256(padKey)
-        dig.update(ecMsgH)
+        digCon = xor_byte(padKey, (ecMsgH+ecMsgH))
+        dig = hashlib.sha256(digCon)
         msgL = xor_byte(dig.digest(), ecMsgL)
         return msgH + msgL
 
