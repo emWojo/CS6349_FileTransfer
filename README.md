@@ -6,6 +6,8 @@ The server directory is assumed to be "serverStore\\" stored in the constant "fS
 The client directory is assumed to be "clientStore\\" stored in the constant "fStore"
 
 ## Get requirements
+python 3.x
+
 py -m pip install -r reqs.txt
 
 ## Run Server First
