@@ -12,7 +12,7 @@ print("Client Running")
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((HOST, PORT))
-s.settimeout(1)
+s.settimeout(30)
 
 # Constants
 usage = "Usage:\n\thelp\n\tupload \"[file]\"\n\tdownload \"[file]\"\n\texit"
@@ -22,41 +22,54 @@ fStore = "clientStore\\"
 f = None #File Upload/Download Buffer
 cIV = None
 sIV = None
+k = []
 
 # Authenticate Server
 with open('keys/pubkey.pem', 'rb') as file:
     pubKey = rsa.PublicKey.load_pkcs1(file.read())
 
-#challenge
-msg = util.getChalMsg()
-s.send(msg)
+while True:
+    try:
+        #challenge
+        msg = util.getChalMsg()
+        s.send(msg)
 
-#confirm
-data = s.recv(1460)
-ver = util.verify_sha256(msg, data, pubKey)
-if False:
-    print("Could Not Verify Server")
-    s.close()
-    exit()
+        #confirm
+        data = s.recv(1460)
+        ver = util.verify_sha256(msg, data, pubKey)
+        if False:
+            print("Could Not Verify Server")
+            time.sleep(60)
+            continue
 
-# Get DH Key
-#agree on prime
-prime = 2048
-msg = prime.to_bytes(4, 'big')
-s.send(msg)
+        # Get DH Key
+        #agree on prime
+        prime = 2048
+        msg = prime.to_bytes(4, 'big')
+        s.send(msg)
 
-#get server pubkey send pubkey
-data = s.recv(1460)
-sPub = int.from_bytes(data, 'big')
-p,g = util.get_dh_prime(prime)
-sec,pub = util.get_dh_secAndpub(p, g)
-pub_bytes = pub.to_bytes(256, 'big')
-s.send(pub_bytes)
- 
-share = util.get_dh_shared(sPub, sec, p)
-share_byte = share.to_bytes(256, 'big')
-k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
+        #get server pubkey send pubkey
+        data = s.recv(1460)
+        sPub = int.from_bytes(data, 'big')
+        p,g = util.get_dh_prime(prime)
+        sec,pub = util.get_dh_secAndpub(p, g)
+        pub_bytes = pub.to_bytes(256, 'big')
+        s.send(pub_bytes)
+        
+        share = util.get_dh_shared(sPub, sec, p)
+        if share == -1:
+            print("Server Public Key Bad Prime")
+            time.sleep(60)
+            continue
+        share_byte = share.to_bytes(256, 'big')
+        k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
+        break
+    except socket.timeout as e:
+        time.sleep(60)
+        continue
+        print("reauthenticate")
     
+s.settimeout(1)
 print("Program Started")
 print(usage)
 while True:

@@ -3,6 +3,7 @@ import util
 import math
 import secrets
 import rsa
+import time
 
 HOST = '0.0.0.0'
 PORT = 6265
@@ -47,29 +48,47 @@ sIV = None
 
 while True:
     conn, addr = s.accept()
-    # Authenticate
-    data = conn.recv(4096)
-    msg = util.signChalMsg(data, privKey)
-    conn.send(msg)
-    
-    # DH
-    #agree on prime send pubkey
-    data = conn.recv(4096)
-    msg = int.from_bytes(data, 'big')
-    p,g = util.get_dh_prime(msg)
-    sec,pub = util.get_dh_secAndpub(p, g)
-    pub_bytes = pub.to_bytes(256, 'big')
-    conn.send(pub_bytes)
+    s.settimeout(60)
+    while True:
+        try:
+            # Authenticate
+            data = conn.recv(4096)
+            msg = util.signChalMsg(data, privKey)
+            conn.send(msg)
+            
+            # DH
+            #agree on prime send pubkey
+            data = conn.recv(4096)
+            msg = int.from_bytes(data, 'big')
+            if msg != 1536 and msg != 2048 and msg != 3072 and msg != 4096 and msg != 6144 and msg != 8192:
+                print("Can't Agree on Prime")
+                time.sleep(30)
+                continue
+            
+            p,g = util.get_dh_prime(msg)
+            sec,pub = util.get_dh_secAndpub(p, g)
+            pub_bytes = pub.to_bytes(256, 'big')
+            conn.send(pub_bytes)
 
-    #get client pub key
-    data = conn.recv(4096)
-    cPub = int.from_bytes(data, 'big')
+            #get client pub key
+            data = conn.recv(4096)
+            cPub = int.from_bytes(data, 'big')
 
-    share = util.get_dh_shared(cPub, sec, p)
-    share_byte = share.to_bytes(256, 'big')
+            share = util.get_dh_shared(cPub, sec, p)
+            if share == -1:
+                print("Client Public Key Bad Prime")
+                time.sleep(30)
+                continue
+            share_byte = share.to_bytes(256, 'big')
 
-    k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
+            k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
+            break
+        except socket.timeout as e:
+            time.sleep(30)
+            continue
+            print("reauthenticate")
     conFlag = True
+    s.settimeout(1)
     while conFlag:
         # Decode a Message
         data = conn.recv(1460)
@@ -200,6 +219,7 @@ while True:
                         if DEBUG:
                             print("download Finished")
                         state = 0
+                        f.close()
                         break
                 
                 # Send Next Part of File
