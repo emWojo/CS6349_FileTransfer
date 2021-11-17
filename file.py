@@ -115,7 +115,6 @@ b = int(binascii.hexlify(secrets.token_bytes(32)), base=16)
 pubA = pow(g,a,p)
 pubB = pow(g,b,p)
 
-
 safePrime = False
 pub = pubA
 if 2 <= pub and pub <= p - 2:
@@ -137,6 +136,25 @@ for i in arr:
     print(i_byte[128:192])
     #print(len(bytes(str(i), 'utf-8')))
     #print(bytes(str(i), 'utf-8'))
+
+p = primes[3072]["p"]
+g = primes[3072]["g"]
+
+a = int(binascii.hexlify(secrets.token_bytes(32)), base=16)
+b = int(binascii.hexlify(secrets.token_bytes(32)), base=16)
+pubA = pow(g,a,p)
+pubB = pow(g,b,p)
+sA = pow(pubB, a, p)
+sB = pow(pubA, b, p)
+rr = [pubA, pubB, sA]
+for i in arr:
+    len = math.ceil(i.bit_length()/8)
+    print(len)
+    i_byte = i.to_bytes(len, 'big')
+    print(i_byte)
+    #print(i_byte[:64])
+    #print(i_byte[64:128])
+    #print(i_byte[128:192])
 
 """
 
