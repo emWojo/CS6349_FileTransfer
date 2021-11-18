@@ -37,7 +37,7 @@ while True:
         #confirm
         data = s.recv(1460)
         ver = util.verify_sha256(msg, data, pubKey)
-        if False:
+        if ver == False:
             print("Could Not Verify Server")
             time.sleep(60)
             continue
@@ -50,7 +50,14 @@ while True:
 
         #get server pubkey send pubkey
         data = s.recv(1460)
-        sPub = int.from_bytes(data, 'big')
+        sPub_bytes = data[:256]
+        sign = data[256:]
+        sPub = int.from_bytes(sPub_bytes, 'big')
+        ver = util.verify_sha256(sPub_bytes, sign, pubKey)
+        if ver == False:
+            print("Could Not Verify Server pubKey")
+            time.sleep(60)
+            continue
         p,g = util.get_dh_prime(prime)
         sec,pub = util.get_dh_secAndpub(p, g)
         pub_bytes = pub.to_bytes(256, 'big')

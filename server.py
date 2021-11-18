@@ -68,7 +68,9 @@ while True:
             p,g = util.get_dh_prime(msg)
             sec,pub = util.get_dh_secAndpub(p, g)
             pub_bytes = pub.to_bytes(256, 'big')
-            conn.send(pub_bytes)
+            msg = util.signChalMsg(pub_bytes, privKey)
+            senMsg = pub_bytes+msg
+            conn.send(senMsg)
 
             #get client pub key
             data = conn.recv(4096)

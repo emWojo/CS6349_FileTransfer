@@ -74,6 +74,7 @@ with open('clientStore\\ex.py', 'rb') as f:
     print(len(contents) > 1703910)
 
 """
+"""
 import os
 import binascii
 import hashlib
@@ -156,7 +157,7 @@ for i in arr:
     #print(i_byte[64:128])
     #print(i_byte[128:192])
 
-"""
+
 
 import time
 import random
@@ -188,12 +189,27 @@ date_time = now.to_bytes(len, 'big')
 print(date_time)
 msg = date_time+nonce
 signed = sign_sha256(msg, privKey)
-print(signed)
+#print(len(signed))
+print(signed[2:])
 ver = verify_sha256(msg, signed, pubKey)
-print(ver)
+#print(ver)
 
 rt = int.from_bytes(msg[:4], 'big')
 rn = int.from_bytes(msg[4:68], 'big')
-print(rt)
-print(rn)
+#print(rt)
+#print(rn)
 """
+import rsa
+with open('keys/pubkey.pem', 'rb') as file:
+    pubKey = rsa.PublicKey.load_pkcs1(file.read())
+
+with open('keys/privkey.pem', 'rb') as file:
+    privKey = rsa.PrivateKey.load_pkcs1(file.read())
+import util
+p,g = util.get_dh_prime(2048)
+sec,pub = util.get_dh_secAndpub(p, g)
+pub_byte = pub.to_bytes(256, 'big')
+msg = util.signChalMsg(pub_byte, privKey)
+print(pub_byte)
+print(msg)
+print(pub_byte+msg[:16])
