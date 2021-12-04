@@ -32,32 +32,30 @@ while True:
     try:
         #challenge
         msg = util.getChalMsg()
-        s.send(msg)
+        #agree on prime
+        prime = 2048
+        prime_bytes = prime.to_bytes(4, 'big')
+        s.send(msg + prime_bytes)
 
         #confirm
         data = s.recv(1460)
-        ver = util.verify_sha256(msg, data, pubKey)
-        if ver == False:
-            print("Could Not Verify Server")
-            time.sleep(60)
-            continue
-
-        # Get DH Key
-        #agree on prime
-        prime = 2048
-        msg = prime.to_bytes(4, 'big')
-        s.send(msg)
-
-        #get server pubkey send pubkey
-        data = s.recv(1460)
-        sPub_bytes = data[:256]
-        sign = data[256:]
-        sPub = int.from_bytes(sPub_bytes, 'big')
+        sPub_bytes = data[:324]
+        sign = data[324:]
         ver = util.verify_sha256(sPub_bytes, sign, pubKey)
         if ver == False:
             print("Could Not Verify Server pubKey")
             time.sleep(60)
             continue
+
+        chal = sPub_bytes[:68]
+        sPub = int.from_bytes(sPub_bytes[68:], 'big')
+
+        if chal != msg:
+            print("Could Not Verify challenge")
+            time.sleep(60)
+            continue
+
+        # Send pub key
         p,g = util.get_dh_prime(prime)
         sec,pub = util.get_dh_secAndpub(p, g)
         pub_bytes = pub.to_bytes(256, 'big')

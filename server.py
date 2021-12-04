@@ -27,7 +27,7 @@ k = [ci,ca,si,sa]
 
 # Constants
 fStore = "serverStore\\"
-DEBUG = False
+DEBUG = True
 
 # Place Holders
 conFlag = False
@@ -53,25 +53,24 @@ while True:
         try:
             # Authenticate
             data = conn.recv(4096)
-            msg = util.signChalMsg(data, privKey)
-            conn.send(msg)
-            
-            # DH
-            #agree on prime send pubkey
-            data = conn.recv(4096)
-            msg = int.from_bytes(data, 'big')
+            chal = data[:68]
+            prime = data[68:]
+            # Agree on prime
+            msg = int.from_bytes(prime, 'big')
             if msg != 1536 and msg != 2048 and msg != 3072 and msg != 4096 and msg != 6144 and msg != 8192:
                 print("Can't Agree on Prime")
                 time.sleep(30)
                 continue
-            
+
+            # Generate pubKey
             p,g = util.get_dh_prime(msg)
             sec,pub = util.get_dh_secAndpub(p, g)
             pub_bytes = pub.to_bytes(256, 'big')
-            msg = util.signChalMsg(pub_bytes, privKey)
-            senMsg = pub_bytes+msg
-            conn.send(senMsg)
 
+            msg = util.signChalMsg(chal+pub_bytes, privKey)
+            senMsg = chal+pub_bytes+msg
+            conn.send(senMsg)
+                     
             #get client pub key
             data = conn.recv(4096)
             cPub = int.from_bytes(data, 'big')
@@ -82,7 +81,6 @@ while True:
                 time.sleep(30)
                 continue
             share_byte = share.to_bytes(256, 'big')
-
             k = [share_byte[:64],share_byte[64:128],share_byte[128:192],share_byte[192:]]
             break
         except socket.timeout as e:
@@ -109,7 +107,7 @@ while True:
             # Generate Appropriate Response
             if state == 0:
                 if DEBUG:
-                    print("start mode")
+                    print("\nstart mode")
                 # Check Message Integrity
                 if fInd == -1:
                     break
@@ -124,6 +122,9 @@ while True:
                     ID = fId
                     ind = 0
                     f = open(fStore+fName, "wb")
+
+                    if DEBUG:
+                        print("Upload", fName)
 
                     #Ack the start message
                     sendMsg = util.getStartAckMsg(fId, fInd, k[3], k[2])
@@ -140,6 +141,9 @@ while True:
                     except IOError as e:
                         print(e)
                         continue
+
+                    if DEBUG:
+                        print("Download", fName)
                     
                     #File in Bytes
                     contents = f.read()
